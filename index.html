@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uganda Market Data</title>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f8fafc; color: #0f172a; }
+  header { background: #1e40af; color: #fff; padding: 16px 20px; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header p { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+  .nav-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  .nav-btn { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .nav-btn:hover { background: rgba(255,255,255,0.3); }
+  .nav-btn.active { background: #fff; color: #1e40af; }
+  .container { padding: 20px; max-width: 1100px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .premium-banner { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1f2937; padding: 16px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 600; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3); }
+  .premium-banner button { background: #1e40af; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; margin-top: 12px; font-weight: 600; cursor: pointer; }
+  .free-banner { background: linear-gradient(135deg, #10b981, #059669); color: #fff; padding: 14px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: 600; }
+  .controls { margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .search-box { width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 15px; font-family: inherit; transition: border-color 0.2s; }
+  .search-box:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+  .controls-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .market-filters { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; overflow-x: auto; padding-bottom: 4px; }
+  .filter-btn { padding: 8px 14px; border-radius: 20px; border: 2px solid #e2e8f0; background: #fff; color: #475569; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
+  .filter-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+  .filter-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .sort-select { padding: 8px 12px; border-radius: 10px; border: 2px solid #e2e8f0; background: #fff; color: #475569; font-weight: 600; font-size: 13px; cursor: pointer; min-width: 140px; }
+  .market-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .market-card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; transition: transform 0.2s, box-shadow 0.2s; }
+  .market-card:hover { transform: translateY(-3px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .market-card h3 { font-size: 16px; margin-bottom: 8px; color: #1e293b; }
+  .market-card .price { font-size: 22px; font-weight: 700; color: #059669; margin: 8px 0; }
+  .market-card .trend { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .trend.up { color: #059669; } .trend.down { color: #dc2626; } .trend.stable { color: #64748b; }
+  .vendor { font-size: 13px; color: #64748b; margin-top: 10px; }
+  .market-tag { display: inline-block; background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 6px; font-size: 11px; margin-top: 10px; font-weight: 600; }
+  .category-tag { display: inline-block; background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 4px; font-size: 10px; margin-top: 6px; margin-left: 4px; font-weight: 500; }
+  .blurred { filter: blur(5px); pointer-events: none; opacity: 0.5; user-select: none; }
+  .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 100; padding: 20px; backdrop-filter: blur(4px); }
+  .modal.active { display: flex; }
+  .modal-content { background: #1e293b; color: #fff; padding: 32px; border-radius: 16px; width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+  .modal-content h2 { margin-bottom: 24px; text-align: center; font-size: 20px; }
+  .modal-content label { font-size: 13px; color: #cbd5e1; margin-bottom: 4px; display: block; }
+  .phone-input-group { display: flex; gap: 8px; margin: 10px 0; }
+  .phone-prefix { background: #334155; color: #fff; padding: 14px 12px; border-radius: 10px; border: 1px solid #334155; font-weight: 600; white-space: nowrap; }
+  .modal-content input, .modal-content select, .modal-content textarea, .modal-content button { width: 100%; padding: 14px 16px; margin: 10px 0; border-radius: 10px; border: 1px solid #334155; font-size: 15px; font-family: inherit; }
+  .phone-input-group input { margin: 0; flex: 1; }
+  .modal-content input, .modal-content select, .modal-content textarea { background: #334155; color: #fff; }
+  .modal-content textarea { resize: vertical; min-height: 80px; }
+  .modal-content button { background: #3b82f6; color: #fff; font-weight: 600; border: none; cursor: pointer; transition: background 0.2s; }
+  .modal-content button:hover:not(:disabled) { background: #2563eb; }
+  .modal-content button:disabled { background: #64748b; cursor: not-allowed; }
+  .close-btn { background: #64748b !important; margin-top: 12px; }
+  .close-btn:hover { background: #475569 !important; }
+  .loading { text-align: center; padding: 60px 20px; color: #64748b; font-size: 15px; }
+  .error { text-align: center; padding: 40px 20px; color: #dc2626; background: #fee2e2; border-radius: 12px; }
+  .test-note { background: #fef3c7; color: #92400e; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 12px; text-align: center; }
+  .no-results { text-align: center; padding: 40px 20px; color: #64748b; grid-column: 1 / -1; font-size: 15px; }
+  .results-count { font-size: 13px; color: #64748b; margin-bottom: 12px; text-align: center; }
+  .sell-header { background: #059669; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+  .sell-header h2 { font-size: 20px; margin-bottom: 8px; }
+  .sell-header p { font-size: 14px; opacity: 0.9; }
+  .sell-btn { background: #059669; color: #fff; border: none; padding: 14px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 20px; font-size: 15px; transition: background 0.2s; }
+  .sell-btn:hover { background: #047857; }
+  .seller-paywall { background: #fff; border: 2px dashed #059669; border-radius: 12px; padding: 40px 20px; text-align: center; color: #475569; margin-bottom: 20px; }
+  .seller-paywall h3 { color: #059669; margin-bottom: 12px; font-size: 18px; }
+  .description-box { font-size: 13px; color: #475569; margin-top: 8px; padding: 8px; background: #f1f5f9; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div><h1>Uganda Market Data</h1><p>Real-time prices across 11 markets</p></div>
+  <div class="nav-buttons">
+    <button class="nav-btn active" onclick="switchPage('market', event)">Market</button>
+    <button class="nav-btn" onclick="switchPage('buyers', event)">Buyers</button>
+    <button class="nav-btn" onclick="switchPage('sell', event)">Sell</button>
+  </div>
+</header>
+
+<div class="container">
+  <!-- MARKET PAGE - Premium 200 UGX for full details -->
+  <div id="marketPage" class="page active">
+    <div id="premiumBanner" class="premium-banner" style="display:none;">
+      <div>Unlock vendor contacts & full details with Premium</div>
+      <div style="font-size: 13px; margin-top: 6px; opacity: 0.8;">Valid for 24 hours • 200 UGX only</div>
+      <button onclick="openSubscribeModal()">Subscribe Now - 200 UGX/day</button>
+      <div class="test-note">TEST MODE: Use card 4084 0840 8408 4081</div>
+    </div>
+    <div class="controls">
+      <input type="text" id="searchBox" class="search-box" placeholder="Search for items... e.g. maize, coffee, oil, furniture, cars" oninput="handleSearch()" />
+      <div class="controls-row">
+        <div class="market-filters" id="marketFilters"></div>
+        <select class="sort-select" id="sortSelect" onchange="handleSort()">
+          <option value="default">Default Order</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+          <option value="name">Name A-Z</option>
+        </select>
+      </div>
+      <div id="resultsCount" class="results-count"></div>
+    </div>
+    <div id="marketData" class="market-grid"><div class="loading">Loading market data...</div></div>
+  </div>
+
+  <!-- BUYERS PAGE - 100% FREE with Contact & Chat -->
+  <div id="buyersPage" class="page">
+    <div class="free-banner">Buyers Browse Free • Contact sellers directly • No subscription required</div>
+    <div class="controls">
+      <input type="text" id="buyerSearchBox" class="search-box" placeholder="Search products to buy... e.g. maize, furniture, cars" oninput="handleBuyerSearch()" />
+      <div class="controls-row">
+        <div class="market-filters" id="buyerMarketFilters"></div>
+        <select class="sort-select" id="buyerSortSelect" onchange="handleBuyerSort()">
+          <option value="default">Default Order</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+          <option value="name">Name A-Z</option>
+        </select>
+      </div>
+      <div id="buyerResultsCount" class="results-count"></div>
+    </div>
+    <div id="buyerData" class="market-grid"><div class="loading">Loading products...</div></div>
+  </div>
+
+  <!-- SELL PAGE - 10,000 UGX Monthly Advertising Fee LOCKED -->
+  <div id="sellPage" class="page">
+    <div class="sell-header">
+      <h2>Sell Your Product</h2>
+      <p>List your product to reach thousands of buyers across Uganda</p>
+      <p style="font-size: 12px; margin-top: 8px; opacity: 0.8;">Monthly advertising fee: 10,000 UGX</p>
+    </div>
+    <button class="sell-btn" onclick="openSellModal()">+ Add New Product</button>
+    <div id="myProducts" class="market-grid"><div class="loading">Loading...</div></div>
+  </div>
+</div>
+
+<!-- Premium Subscription Modal - 200 UGX -->
+<div id="subscribeModal" class="modal">
+  <div class="modal-content">
+    <h2>Daily Premium Access</h2>
+    <label>Phone Number</label><div class="phone-input-group"><div class="phone-prefix">+256</div><input type="tel" id="phone" placeholder="700000123" maxlength="9" /></div>
+    <label>Email</label><input type="email" id="buyerEmail" placeholder="your@email.com" />
+    <label>Amount</label><input type="number" id="amount" value="200" readonly />
+    <button id="subscribeBtn" onclick="payWithPaystack(200, 'premium')">Pay 200 UGX</button>
+    <button class="close-btn" onclick="closeSubscribeModal()">Cancel</button>
+    <div class="test-note">TEST MODE: Use card 4084 0840 8408 4081</div>
+  </div>
+</div>
+
+<!-- Seller Advertising Subscription Modal - 10,000 UGX MONTHLY -->
+<div id="sellerSubscribeModal" class="modal">
+  <div class="modal-content">
+    <h2>Seller Advertising - 10,000 UGX/Month</h2>
+    <p style="font-size: 13px; color: #cbd5e1; text-align: center; margin-bottom: 16px;">Pay 10,000 UGX monthly to list and advertise your products on the platform</p>
+    <label>Phone Number</label><div class="phone-input-group"><div class="phone-prefix">+256</div><input type="tel" id="sellerPhone" placeholder="700000123" maxlength="9" /></div>
+    <label>Email</label><input type="email" id="sellerEmail" placeholder="your@email.com" required />
+    <label>Amount</label><input type="number" id="sellerAmount" value="10000" readonly />
+    <button id="sellerSubscribeBtn" onclick="payWithPaystack(10000, 'seller')">Pay 10,000 UGX</button>
+    <button class="close-btn" onclick="closeSellerSubscribeModal()">Cancel</button>
+    <div class="test-note">TEST MODE: Use card 4084 0840 8408 4081</div>
+  </div>
+</div>
+
+<!-- Sell Product Modal - with Location + Description -->
+<div id="sellModal" class="modal">
+  <div class="modal-content">
+    <h2>List Your Product</h2>
+    <label>Product Name</label><input type="text" id="sellItem" placeholder="e.g. Fresh Matooke" />
+    <label>Price (UGX)</label><input type="text" id="sellPrice" placeholder="e.g. 8000" />
+    <label>Category</label><select id="sellCategory"><option value="Food">Food</option><option value="Grains">Grains</option><option value="Vegetables">Vegetables</option><option value="Fruits">Fruits</option><option value="Meat">Meat</option><option value="Dairy">Dairy</option><option value="Oil">Oil</option><option value="Fuel">Fuel</option><option value="Furniture">Furniture</option><option value="Electronics">Electronics</option><option value="Vehicles">Vehicles</option></select>
+    <label>Market Location</label><select id="sellMarket"><option value="Owino">Owino Market</option><option value="Nakasero">Nakasero Market</option><option value="Kalerwe">Kalerwe Market</option><option value="Jinja">Jinja Market</option><option value="Mbarara">Mbarara Market</option><option value="Iganga">Iganga Market</option><option value="Mbale">Mbale Market</option><option value="Masaka">Masaka Market</option><option value="Nateete">Nateete Market</option><option value="Gulu">Gulu Market</option><option value="Fort Portal">Fort Portal Market</option></select>
+    <label>Specific Location (Optional)</label><input type="text" id="sellLocation" placeholder="e.g. Near Gate 2, Stall 45" />
+    <label>Contact Number</label><div class="phone-input-group"><div class="phone-prefix">+256</div><input type="tel" id="sellPhone" placeholder="700000123" maxlength="9" /></div>
+    <label>Product Description</label><textarea id="sellDescription" placeholder="Describe your product, condition, quantity..."></textarea>
+    <button id="listProductBtn" onclick="listProduct()">List Product</button>
+    <button class="close-btn" onclick="closeSellModal()">Cancel</button>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js", "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js", "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js" } }
+</script>
+<script type="module">
+import { initializeApp } from "firebase/app";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query, orderBy, addDoc, where, deleteDoc } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAaxX4OuL4aeX9_pZOcZODdkNlmY8sVN2Y",
+  authDomain: "kampala-market-data.firebaseapp.com",
+  projectId: "kampala-market-data",
+  storageBucket: "kampala-market-data.firebasestorage.app",
+  messagingSenderId: "136719938325",
+  appId: "1:136719938325:web:0910c17b645ad0d1e0ef1c"
+};
+
+const PAYSTACK_PUBLIC_KEY = "pk_test_xxx"; // REPLACE WITH YOUR PAYSTACK PUBLIC KEY
+const UGANDA_COUNTRY_CODE = "+256";
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// State variables
+let currentUserId = null;
+let isSubscribed = false; // 200 UGX premium for market page vendor contacts
+let isSellerSubscribed = false; // 10,000 UGX monthly advertising for sellers
+let userPhone = "";
+let currentMarketFilter = "all";
+let currentSearchQuery = "";
+let currentSortOrder = "default";
+let buyerSearchQuery = "";
+let buyerMarketFilter = "all";
+let buyerSortOrder = "default";
+let marketData = [];
+let myProductsData = [];
+const allMarkets = ["Owino", "Nakasero", "Kalerwe", "Jinja", "Mbarara", "Iganga", "Mbale", "Masaka", "Nateete", "Gulu", "Fort Portal"];
+
+/**
+ * Paystack payment handler - ONLY PAYSTACK CODE ADDED
+ */
+window.payWithPaystack = function(amountUGX, type) {
+  const email = type === 'seller' 
+    ? document.getElementById("sellerEmail").value.trim() 
+    : document.getElementById("buyerEmail").value.trim();
+  const phoneInput = type === 'seller' 
+    ? document.getElementById("sellerPhone").value.trim()
+    : document.getElementById("phone").value.trim();
+  const btn = type === 'seller' 
+    ? document.getElementById("sellerSubscribeBtn")
+    : document.getElementById("subscribeBtn");
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert("Please enter a valid email address");
+    return;
+  }
+  if (!/^[0-9]{9}$/.test(phoneInput)) {
+    alert("Enter a valid 9-digit Uganda phone number after +256");
+    return;
+  }
+
+  const amountKobo = amountUGX * 100; // Paystack uses kobo
+  btn.disabled = true;
+  btn.textContent = "Processing Payment...";
+
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: email,
+    amount: amountKobo,
+    currency: "UGX",
+    ref: (type === 'seller' ? 'sell_' : 'prem_') + Math.floor(Math.random() * 1000000 + 1),
+    metadata: {
+      custom_fields: [
+        { display_name: "Payment Type", value: type },
+        { display_name: "Phone", value: UGANDA_COUNTRY_CODE + phoneInput }
+      ]
+    },
+    onClose: function() {
+      btn.disabled = false;
+      btn.textContent = type === 'seller' ? "Pay 10,000 UGX" : "Pay 200 UGX";
+    },
+    callback: async function(response) {
+      await handlePaymentSuccess(response, amountUGX, type, UGANDA_COUNTRY_CODE + phoneInput, email);
+    }
+  });
+  handler.openIframe();
+}
+
+/**
+ * Handle successful Paystack payment
+ */
+async function handlePaymentSuccess(response, amount, type, phone, email) {
+  const btn = type === 'seller' 
+    ? document.getElementById("sellerSubscribeBtn")
+    : document.getElementById("subscribeBtn");
+  
+  try {
+    if (type === 'seller') {
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      const sellerSubRef = doc(db, "sellerSubscriptions", currentUserId);
+      await setDoc(sellerSubRef, {
+        phone: phone, email: email, amount: amount,
+        subscribedAt: new Date(), expiresAt: expiryDate, 
+        status: "active", transactionRef: response.reference
+      });
+      isSellerSubscribed = true;
+      closeSellerSubscribeModal();
+      loadMyProducts();
+      alert("PAYMENT SUCCESSFUL!\n\nSeller access unlocked for 30 days.\nTransaction Ref: " + response.reference);
+    } else {
+      const expiryDate = new Date();
+      expiryDate.setHours(expiryDate.getHours() + 24);
+      const subRef = doc(db, "subscriptions", currentUserId);
+      await setDoc(subRef, {
+        phone: phone, email: email, amount: amount,
+        subscribedAt: new Date(), expiresAt: expiryDate, 
+        status: "active", transactionRef: response.reference
+      });
+      isSubscribed = true;
+      userPhone = phone;
+      closeSubscribeModal();
+      renderMarketData();
+      alert("PAYMENT SUCCESSFUL!\n\nPremium access active for 24 hours.\nTransaction Ref: " + response.reference);
+    }
+  } catch (error) {
+    console.error("Payment save error:", error);
+    alert("Payment succeeded but failed to save. Contact support with ref: " + response.reference);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = type === 'seller' ? "Pay 10,000 UGX" : "Pay 200 UGX";
+  }
+}
+
+/**
+ * Switch between Market, Buyers and Sell pages
+ */
+window.switchPage = function(page, event) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(page + 'Page').classList.add('active');
+  event.target.classList.add('active');
+  if (page === 'sell') loadMyProducts();
+  if (page === 'buyers') renderBuyerData();
+}
+
+/**
+ * Extract numeric price from "8,000 UGX" format for sorting
+ */
+function extractPrice(priceString) { 
+  return parseInt(priceString.replace(/[^0-9]/g, '')) || 0; 
+}
+
+/**
+ * Apply filter + search + sort to data
+ */
+function getFilteredData(data, query, marketFilter, sortOrder) {
+  let filtered = [...data];
+  if (marketFilter !== "all") filtered = filtered.filter(item => item.market === marketFilter);
+  if (query.trim() !== "") {
+    const q = query.toLowerCase().trim();
+    filtered = filtered.filter(item => 
+      item.item.toLowerCase().includes(q) || 
+      item.vendor.toLowerCase().includes(q) ||
+      item.market.toLowerCase().includes(q) ||
+      item.category.toLowerCase().includes(q) ||
+      (item.description && item.description.toLowerCase().includes(q))
+    );
+  }
+  if (sortOrder === "price-low") filtered.sort((a, b) => extractPrice(a.price) - extractPrice(b.price));
+  else if (sortOrder === "price-high") filtered.sort((a, b) => extractPrice(b.price) - extractPrice(a.price));
+  else if (sortOrder === "name") filtered.sort((a, b) => a.item.localeCompare(b.item));
+  return filtered;
+}
+
+/**
+ * Render market cards - blurred if not premium
+ */
+function renderMarketData() {
+  const container = document.getElementById("marketData");
+  const banner = document.getElementById("premiumBanner");
+  const resultsCount = document.getElementById("resultsCount");
+  banner.style.display = isSubscribed ? "none" : "block";
+  const filteredData = getFilteredData(marketData, currentSearchQuery, currentMarketFilter, currentSortOrder);
+  resultsCount.textContent = currentSearchQuery || currentMarketFilter !== "all" ? `Showing ${filteredData.length} of ${marketData.length} items` : `${marketData.length} items available`;
+  if (filteredData.length === 0) {
+    container.innerHTML = `<div class="no-results">${currentSearchQuery ? `No items found for "${currentSearchQuery}"` : `No items found for ${currentMarketFilter} Market`}</div>`;
+    return;
+  }
+  container.innerHTML = filteredData.map(item => `
+    <div class="market-card ${!isSubscribed ? 'blurred' : ''}">
+      <h3>${item.item}</h3>
+      <div class="price">${item.price}</div>
+      <div class="trend ${item.trend}">${item.trend === 'up' ? '▲' : item.trend === 'down' ? '▼' : '•'} ${item.change}</div>
+      <div class="vendor">${isSubscribed ? item.vendor : '*** Contact hidden ***'}</div>
+      <div><span class="market-tag">${item.market}</span><span class="category-tag">${item.category}</span></div>
+    </div>
+  `).join('');
+}
+
+/**
+ * Render buyer cards - 100% FREE with Contact, Description, Chat, Call, Purchase Info, Location
+ */
+function renderBuyerData() {
+  const container = document.getElementById("buyerData");
+  const resultsCount = document.getElementById("buyerResultsCount");
+  const allProducts = [...marketData, ...myProductsData];
+  const filteredData = getFilteredData(allProducts, buyerSearchQuery, buyerMarketFilter, buyerSortOrder);
+  resultsCount.textContent = buyerSearchQuery || buyerMarketFilter !== "all" ? `Showing ${filteredData.length} of ${allProducts.length} products` : `${allProducts.length} products available`;
+  
+  if (filteredData.length === 0) {
+    container.innerHTML = `<div class="no-results">${buyerSearchQuery ? `No products found for "${buyerSearchQuery}"` : `No products found for ${buyerMarketFilter} Market`}</div>`;
+    return;
+  }
+  
+  container.innerHTML = filteredData.map(item => `
+    <div class="market-card">
+      <h3>${item.item}</h3>
+      <div class="price">${item.price}</div>
+      <div class="trend ${item.trend}">${item.trend === 'up' ? '▲' : item.trend === 'down' ? '▼' : '•'} ${item.change}</div>
+      <div class="vendor"><strong>Seller:</strong> ${item.vendor}</div>
+      <div class="vendor"><strong>Contact:</strong> ${item.phone || 'Contact available after call'}</div>
+      ${item.location ? `<div class="vendor"><strong>Location:</strong> ${item.location}</div>` : ''}
+      ${item.description ? `<div class="description-box"><strong>Description:</strong> ${item.description}</div>` : ''}
+      <div style="font-size: 12px; color: #64748b; margin-top: 8px;">
+        <strong>Purchase Info:</strong> Cash on delivery • Meet at market location
+      </div>
+      <div><span class="market-tag">${item.market}</span><span class="category-tag">${item.category}</span></div>
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button onclick="chatSeller('${item.phone || ''}', '${item.item}')" 
+          style="flex: 1; padding: 10px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">
+          💬 Chat Seller
+        </button>
+        <button onclick="callSeller('${item.phone || ''}')" 
+          style="flex: 1; padding: 10px; background: #059669; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">
+          📞 Call
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/**
+ * Chat with seller - opens WhatsApp with pre-filled message
+ */
+window.chatSeller = function(phone, product) {
+  if (!phone) {
+    alert("Seller contact is not available for this product.");
+    return;
+  }
+  const message = encodeURIComponent(`Hi, I am interested in your ${product} listed on Uganda Market Data.`);
+  window.open(`https://wa.me/${phone.replace('+', '')}?text=${message}`, '_blank');
+}
+
+/**
+ * Call seller directly
+ */
+window.callSeller = function(phone) {
+  if (!phone) {
+    alert("Seller contact is not available for this product.");
+    return;
+  }
+  window.open(`tel:${phone}`, '_self');
+}
+
+/**
+ * Generate market filter buttons for Market page
+ */
+function renderMarketFilters() {
+  const container = document.getElementById("marketFilters");
+  container.innerHTML = `<button class="filter-btn ${currentMarketFilter === 'all' ? 'active' : ''}" onclick="filterMarket('all', event)">All Markets</button>` +
+    allMarkets.map(market => `<button class="filter-btn ${currentMarketFilter === market ? 'active' : ''}" onclick="filterMarket('${market}', event)">${market}</button>`).join('');
+}
+
+/**
+ * Generate market filter buttons for Buyers page
+ */
+function renderBuyerMarketFilters() {
+  const container = document.getElementById("buyerMarketFilters");
+  container.innerHTML = `<button class="filter-btn ${buyerMarketFilter === 'all' ? 'active' : ''}" onclick="filterBuyerMarket('all', event)">All Markets</button>` +
+    allMarkets.map(market => `<button class="filter-btn ${buyerMarketFilter === market ? 'active' : ''}" onclick="filterBuyerMarket('${market}', event)">${market}</button>`).join('');
+}
+
+window.handleSearch = function() { 
+  currentSearchQuery = document.getElementById("searchBox").value; 
+  renderMarketData(); 
+}
+window.handleBuyerSearch = function() { 
+  buyerSearchQuery = document.getElementById("buyerSearchBox").value; 
+  renderBuyerData(); 
+}
+window.filterMarket = function(market, event) { 
+  currentMarketFilter = market; 
+  renderMarketFilters(); 
+  renderMarketData(); 
+}
+window.filterBuyerMarket = function(market, event) { 
+  buyerMarketFilter = market; 
+  renderBuyerMarketFilters(); 
+  renderBuyerData(); 
+}
+window.handleSort = function() { 
+  currentSortOrder = document.getElementById("sortSelect").value; 
+  renderMarketData(); 
+}
+window.handleBuyerSort = function() { 
+  buyerSortOrder = document.getElementById("buyerSortSelect").value; 
+  renderBuyerData(); 
+}
+/**
+ * Initialize Firebase and load real-time market data
+ */
+async function initApp() {
+  try {
+    const userCredential = await signInAnonymously(auth);
+    currentUserId = userCredential.user.uid;
+    console.log("Firebase user ID:", currentUserId);
+    
+    // Load market data from Firestore in real-time
+    const marketQuery = query(collection(db, "marketPrices"), orderBy("item"));
+    onSnapshot(marketQuery, (snapshot) => {
+      marketData = snapshot.empty ? getSampleData() : snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderMarketFilters();
+      renderBuyerMarketFilters();
+      renderMarketData();
+      renderBuyerData();
+    }, (error) => {
+      console.error("Firestore error:", error);
+      marketData = getSampleData();
+      renderMarketFilters();
+      renderBuyerMarketFilters();
+      renderMarketData();
+      render
+            renderBuyerData();
+    });
+    
+    loadMyProducts();
+  } catch (err) {
+    console.error("Firebase auth error:", err);
+    document.getElementById("marketData").innerHTML = `<div class="error">Firebase connection failed. Please refresh.</div>`;
+    document.getElementById("buyerData").innerHTML = `<div class="error">Firebase connection failed. Please refresh.</div>`;
+  }
+}
+
+/**
+ * Sample data for 11 markets - 60+ items with contact, description, location
+ */
+function getSampleData() {
+  return [
+    // ===== FOOD CROPS - OWINO MARKET =====
+    { id: "1", item: "Matooke (1 bunch)", price: "8,000 UGX", trend: "up", change: "+5%", vendor: "Owino Market - Stall 23", market: "Owino", category: "Food", phone: "+256701234567", location: "Gate 2, Stall 23", description: "Fresh green matooke, harvested this morning" },
+    { id: "2", item: "Rice (1 kg)", price: "4,800 UGX", trend: "stable", change: "0%", vendor: "Owino Market - Stall 67", market: "Owino", category: "Food", phone: "+256702345678", location: "Main Hall", description: "Grade A imported rice, 25kg bags available" },
+    { id: "3", item: "Maize Flour (1 kg)", price: "2,800 UGX", trend: "stable", change: "0%", vendor: "Owino Market - Stall 102", market: "Owino", category: "Grains", phone: "+256703456789", location: "Stall 102", description: "Fine ground maize flour, 1kg packets" },
+    { id: "4", item: "Maize Grains (1 kg)", price: "1,600 UGX", trend: "down", change: "-5%", vendor: "Owino Market - Stall 89", market: "Owino", category: "Grains", phone: "+256704567890", location: "Stall 89", description: "Dry yellow maize grains, good for milling" },
+    { id: "5", item: "Millet (1 kg)", price: "3,200 UGX", trend: "up", change: "+8%", vendor: "Owino Market - Stall 44", market: "Owino", category: "Grains", phone: "+256705678901", location: "Stall 44", description: "Organic millet, directly from farmers" },
+    { id: "6", item: "Cabbage (1 head)", price: "1,500 UGX", trend: "stable", change: "0%", vendor: "Owino Market - Stall 55", market: "Owino", category: "Vegetables", phone: "+256706789012", location: "Vegetable Section", description: "Fresh green cabbage, medium size" },
+    
+    // ===== FOOD CROPS - NAKASERO MARKET =====
+    { id: "7", item: "Tomatoes (1 kg)", price: "3,500 UGX", trend: "down", change: "-12%", vendor: "Nakasero Market - Stall 45", market: "Nakasero", category: "Vegetables", phone: "+256707890123", location: "Stall 45", description: "Ripe red tomatoes, farm fresh" },
+    { id: "8", item: "Beans (1 kg)", price: "3,200 UGX", trend: "down", change: "-3%", vendor: "Nakasero Market - Stall 31", market: "Nakasero", category: "Legumes", phone: "+256708901234", location: "Stall 31", description: "Red kidney beans, clean and dry" },
+    { id: "9", item: "Chicken (1 kg)", price: "12,000 UGX", trend: "up", change: "+7%", vendor: "Nakasero Market - Stall 78", market: "Nakasero", category: "Meat", phone: "+256709012345", location: "Meat Section", description: "Fresh broiler chicken, dressed and clean" },
+    { id: "10", item: "Milk (1 litre)", price: "3,000 UGX", trend: "up", change: "+4%", vendor: "Nakasero Market - Stall 20", market: "Nakasero", category: "Dairy", phone: "+256710123456", location: "Stall 20", description: "Fresh cow milk, pasteurized" },
+    { id: "11", item: "Mangoes (1 kg)", price: "2,500 UGX", trend: "up", change: "+15%", vendor: "Nakasero Market - Stall 66", market: "Nakasero", category: "Fruits", phone: "+256711234567", location: "Fruit Section", description: "Sweet ripe mangoes, seasonal" },
+    
+    // ===== FUEL & OILS - KALERWE MARKET =====
+    { id: "12", item: "Cooking Oil (1 litre)", price: "8,500 UGX", trend: "up", change: "+12%", vendor: "Kalerwe Market - Stall 12", market: "Kalerwe", category: "Oil", phone: "+256712345678", location: "Stall 12", description: "Refined cooking oil, 1 litre bottle" },
+    { id: "13", item: "Paraffin (1 litre)", price: "3,200 UGX", trend: "stable", change: "0%", vendor: "Kalerwe Market - Stall 34", market: "Kalerwe", category: "Fuel", phone: "+256713456789", location: "Stall 34", description: "Clean paraffin for lighting and cooking" },
+    { id: "14", item: "Onions (1 kg)", price: "4,200 UGX", trend: "up", change: "+8%", vendor: "Kalerwe Market - Stall 12", market: "Kalerwe", category: "Vegetables", phone: "+256712345678", location: "Stall 12", description: "Dry red onions, good quality" },
+    { id: "15", item: "Irish Potatoes (1 kg)", price: "2,500 UGX", trend: "up", change: "+15%", vendor: "Kalerwe Market - Stall 89", market: "Kalerwe", category: "Vegetables", phone: "+256714567890", location: "Stall 89", description: "Fresh Irish potatoes, medium size" },
+    
+    // ===== COFFEE & GRAINS - MBALE MARKET =====
+    { id: "16", item: "Coffee Beans (1 kg)", price: "8,500 UGX", trend: "up", change: "+15%", vendor: "Mbale Market - Stall 56", market: "Mbale", category: "Coffee", phone: "+256715678901", location: "Stall 56", description: "Arabica coffee beans, sun dried" },
+    { id: "17", item: "Millet (1 kg)", price: "2,900 UGX", trend: "stable", change: "0%", vendor: "Mbale Market - Stall 23", market: "Mbale", category: "Grains", phone: "+256716789012", location: "Stall 23", description: "White millet, clean and dry" },
+    { id: "18", item: "Maize (1 kg)", price: "1,500 UGX", trend: "down", change: "-4%", vendor: "Mbale Market - Stall 41", market: "Mbale", category: "Grains", phone: "+256717890123", location: "Stall 41", description: "Yellow maize grains" },
+    
+    // ===== FURNITURE - OWINO MARKET =====
+    { id: "19", item: "Wooden Chair", price: "45,000 UGX", trend: "stable", change: "0%", vendor: "Owino Market - Stall 120", market: "Owino", category: "Furniture", phone: "+256718901234", location: "Furniture Section", description: "Solid wood chair, handcrafted, brown finish" },
+    { id: "20", item: "Wooden Table", price: "120,000 UGX", trend: "up", change: "+5%", vendor: "Owino Market - Stall 125", market: "Owino", category: "Furniture", phone: "+256719012345", location: "Furniture Section", description: "Dining table, 6 seater, hardwood" },
+    { id: "21", item: "Mattress (Single)", price: "85,000 UGX", trend: "stable", change: "0%", vendor: "Owino Market - Stall 130", market: "Owino", category: "Furniture", phone: "+256720123456", location: "Stall 130", description: "Foam mattress, single size, 3 inch" },
+    { id: "22", item: "Plastic Chair", price: "18,000 UGX", trend: "stable", change: "0%", vendor: "Owino Market - Stall 135", market: "Owino", category: "Furniture", phone: "+256721234567", location: "Stall 135", description: "Durable plastic chair, white color" },
+    
+    // ===== ELECTRONICS - NAKASERO MARKET =====
+    { id: "23", item: "Phone Charger", price: "15,000 UGX", trend: "stable", change: "0%", vendor: "Nakasero Market - Stall 200", market: "Nakasero", category: "Electronics", phone: "+256722345678", location: "Electronics Section", description: "Universal phone charger, USB cable included" },
+    { id: "24", item: "LED Bulb (9W)", price: "3,500 UGX", trend: "down", change: "-10%", vendor: "Nakasero Market - Stall 205", market: "Nakasero", category: "Electronics", phone: "+256723456789", location: "Stall 205", description: "Energy saving LED bulb, 9W, white light" },
+    { id: "25", item: "Power Bank (10000mAh)", price: "35,000 UGX", trend: "up", change: "+5%", vendor: "Nakasero Market - Stall 210", market: "Nakasero", category: "Electronics", phone: "+256724567890", location: "Stall 210", description: "Portable power bank, 2 USB ports" },
+    { id: "26", item: "Radio FM", price: "25,000 UGX", trend: "stable", change: "0%", vendor: "Nakasero Market - Stall 215", market: "Nakasero", category: "Electronics", phone: "+256725678901", location: "Stall 215", description: "Portable FM radio with battery" },
+    
+    // ===== FRUITS - MASAKA MARKET =====
+    { id: "27", item: "Mangoes (1 kg)", price: "2,200 UGX", trend: "up", change: "+18%", vendor: "Masaka Market - Stall 18", market: "Masaka", category: "Fruits", phone: "+256726789012", location: "Stall 18", description: "Sweet mangoes, freshly picked" },
+    { id: "28", item: "Pineapple (1 piece)", price: "2,000 UGX", trend: "stable", change: "0%", vendor: "Masaka Market - Stall 29", market: "Masaka", category: "Fruits", phone: "+256727890123", location: "Stall 29", description: "Large ripe pineapple" },
+    { id: "29", item: "Avocado (1 piece)", price: "1,000 UGX", trend: "down", change: "-5%", vendor: "Masaka Market - Stall 35", market: "Masaka", category: "Fruits", phone: "+256728901234", location: "Stall 35", description: "Fresh ripe avocado" },
+    { id: "30", item: "Oranges (1 kg)", price: "2,800 UGX", trend: "up", change: "+10%", vendor: "Masaka Market - Stall 42", market: "Masaka", category: "Fruits", phone: "+256729012345", location: "Stall 42", description: "Juicy oranges, sweet taste" },
+    
+    // ===== LIVESTOCK - MBARARA MARKET =====
+    { id: "31", item: "Beef (1 kg)", price: "14,000 UGX", trend: "up", change: "+8%", vendor: "Mbarara Market - Stall 44", market: "Mbarara", category: "Meat", phone: "+256730123456", location: "Meat Section", description: "Fresh beef, grass fed" },
+    { id: "32", item: "Milk (1 litre)", price: "2,500 UGX", trend: "stable", change: "0%", vendor: "Mbarara Market - Stall 12", market: "Mbarara", category: "Dairy", phone: "+256731234567", location: "Stall 12", description: "Fresh milk from local farms" },
+    { id: "33", item: "Goat Meat (1 kg)", price: "13,500 UGX", trend: "up", change: "+6%", vendor: "Mbarara Market - Stall 50", market: "Mbarara", category: "Meat", phone: "+256732345678", location: "Stall 50", description: "Fresh goat meat, lean cuts" },
+    { id: "34", item: "Eggs (tray 30)", price: "9,500 UGX", trend: "up", change: "+4%", vendor: "Mbarara Market - Stall 60", market: "Mbarara", category: "Dairy", phone: "+256733456789", location: "Stall 60", description: "Fresh farm eggs, tray of 30" },
+    
+    // ===== GRAINS - IGANGA MARKET =====
+    { id: "35", item: "Maize (1 kg)", price: "1,400 UGX", trend: "stable", change: "0%", vendor: "Iganga Market - Stall 67", market: "Iganga", category: "Grains", phone: "+256734567890", location: "Stall 67", description: "Dry maize grains" },
+    { id: "36", item: "Beans (1 kg)", price: "2,900 UGX", trend: "down", change: "-4%", vendor: "Iganga Market - Stall 19", market: "Iganga", category: "Legumes", phone: "+256735678901", location: "Stall 19", description: "Mixed beans, clean" },
+    { id: "37", item: "Rice (1 kg)", price: "4,500 UGX", trend: "stable", change: "0%", vendor: "Iganga Market - Stall 88", market: "Iganga", category: "Food", phone: "+256736789012", location: "Stall 88", description: "Local rice, 1kg pack" },
+    { id: "38", item: "Sorghum (1 kg)", price: "1,700 UGX", trend: "stable", change: "0%", vendor: "Iganga Market - Stall 95", market: "Iganga", category: "Grains", phone: "+256737890123", location: "Stall 95", description: "Red sorghum grains" },
+    
+    // ===== FUEL & FOOD - JINJA MARKET =====
+    { id: "39", item: "Cooking Oil (1 litre)", price: "8,200 UGX", trend: "up", change: "+10%", vendor: "Jinja Market - Stall 15", market: "Jinja", category: "Oil", phone: "+256738901234", location: "Stall 15", description: "Vegetable cooking oil" },
+    { id: "40", item: "Paraffin (1 litre)", price: "3,000 UGX", trend: "stable", change: "0%", vendor: "Jinja Market - Stall 22", market: "Jinja", category: "Fuel", phone: "+256739012345", location: "Stall 22", description: "Household paraffin" },
+    { id: "41", item: "Fish (1 kg)", price: "10,000 UGX", trend: "stable", change: "0%", vendor: "Jinja Market - Stall 33", market: "Jinja", category: "Seafood", phone: "+256740123456", location: "Fish Section", description: "Fresh tilapia fish" },
+    { id: "42", item: "Sweet Potatoes (1 kg)", price: "1,600 UGX", trend: "up", change: "+5%", vendor: "Jinja Market - Stall 44", market: "Jinja", category: "Vegetables", phone: "+256741234567", location: "Stall 44", description: "Orange sweet potatoes" },
+    
+    // ===== NORTHERN GOODS - GULU MARKET =====
+    { id: "43", item: "Simsim (1 kg)", price: "4,500 UGX", trend: "up", change: "+10%", vendor: "Gulu Market - Stall 12", market: "Gulu", category: "Grains", phone: "+256742345678", location: "Stall 12", description: "Sesame seeds, clean" },
+    { id: "44", item: "Sorghum (1 kg)", price: "1,800 UGX", trend: "stable", change: "0%", vendor: "Gulu Market - Stall 25", market: "Gulu", category: "Grains", phone: "+256743456789", location: "Stall 25", description: "White sorghum" },
+    { id: "45", item: "Groundnuts (1 kg)", price: "5,200 UGX", trend: "stable", change: "0%", vendor: "Gulu Market - Stall 41", market: "Gulu", category: "Legumes", phone: "+256744567890", location: "Stall 41", description: "Roasted groundnuts" },
+    { id: "46", item: "Maize (1 kg)", price: "1,500 UGX", trend: "down", change: "-3%", vendor: "Gulu Market - Stall 55", market: "Gulu", category: "Grains", phone: "+256745678901", location: "Stall 55", description: "White maize" },
+    
+    // ===== WESTERN GOODS - FORT PORTAL MARKET =====
+    { id: "47", item: "Tea Leaves (1 kg)", price: "6,000 UGX", trend: "stable", change: "0%", vendor: "Fort Portal Market - Stall 18", market: "Fort Portal", category: "Beverage", phone: "+256746789012", location: "Stall 18", description: "Black tea leaves, loose" },
+    { id: "48", item: "Coffee Beans (1 kg)", price: "9,000 UGX", trend: "up", change: "+12%", vendor: "Fort Portal Market - Stall 29", market: "Fort Portal", category: "Coffee", phone: "+256747890123", location: "Stall 29", description: "Robusta coffee beans" },
+    { id: "49", item: "Matooke (1 bunch)", price: "6,500 UGX", trend: "up", change: "+7%", vendor: "Fort Portal Market - Stall 33", market: "Fort Portal", category: "Food", phone: "+256748901234", location: "Stall 33", description: "Fresh matooke" },
+    { id: "50", item: "Irish Potatoes (1 kg)", price: "2,000 UGX", trend: "down", change: "-8%", vendor: "Fort Portal Market - Stall 40", market: "Fort Portal", category: "Vegetables", phone: "+256749012345", location: "Stall 40", description: "Fresh potatoes" },
+    
+    // ===== HOUSEHOLD GOODS - NATEETE MARKET =====
+    { id: "51", item: "Cooking Oil (1 litre)", price: "8,800 UGX", trend: "up", change: "+15%", vendor: "Nateete Market - Stall 14", market: "Nateete", category: "Oil", phone: "+256750123456", location: "Stall 14", description: "Refined oil" },
+    { id: "52", item: "Paraffin (1 litre)", price: "3,400 UGX", trend: "stable", change: "0%", vendor: "Nateete Market - Stall 26", market: "Nateete", category: "Fuel", phone: "+256751234567", location: "Stall 26", description: "Lamp paraffin" },
+    { id: "53", item: "Carrots (1 kg)", price: "2,000 UGX", trend: "stable", change: "0%", vendor: "Nateete Market - Stall 37", market: "Nateete", category: "Vegetables", phone: "+256752345678", location: "Stall 37", description: "Fresh carrots" },
+    { id: "54", item: "Sugar (1 kg)", price: "3,600 UGX", trend: "stable", change: "0%", vendor: "Nateete Market - Stall 48", market: "Nateete", category: "Groceries", phone: "+256753456789", location: "Stall 48", description: "White sugar, 1kg" },
+    
+    // ===== VEHICLES & CARS - OWINO MARKET =====
+    { id: "55", item: "Baj Motorcycle (New)", price: "6,500,000 UGX", trend: "stable", change: "0%", vendor: "Owino Market - Stall 300", market: "Owino", category: "Vehicles", phone: "+256754567890", location: "Vehicle Section", description: "Brand new Bajaj motorcycle, 150cc" },
+    { id: "56", item: "Toyota Corolla (Used 2015)", price: "28,000,000 UGX", trend: "down", change: "-5%", vendor: "Owino Market - Stall 310", market: "Owino", category: "Vehicles", phone: "+256755678901", location: "Car Yard", description: "Used Toyota Corolla, manual, good condition" },
+    { id: "57", item: "Toyota Pickup Truck (Used)", price: "45,000,000 UGX", trend: "up", change: "+3%", vendor: "Owino Market - Stall 320", market: "Owino", category: "Vehicles", phone: "+256756789012", location: "Car Yard", description: "4x4 pickup truck, diesel engine" },
+    { id: "58", item: "Motorcycle Spare Tire", price: "35,000 UGX", trend: "stable", change: "0%", vendor: "Owino Market - Stall 330", market: "Owino", category: "Vehicle Parts", phone: "+256757890123", location: "Spare Parts Section", description: "New motorcycle tire, 18 inch" },
+    
+    // ===== VEHICLES - NAKASERO MARKET =====
+    { id: "59", item: "Bicycle (Mountain Bike)", price: "450,000 UGX", trend: "up", change: "+10%", vendor: "Nakasero Market - Stall 400", market: "Nakasero", category: "Vehicles", phone: "+256758901234", location: "Bicycle Section", description: "Mountain bike, 21 speed, alloy frame" },
+    { id: "60", item: "Car Battery (12V 60Ah)", price: "280,000 UGX", trend: "stable", change: "0%", vendor: "Nakasero Market - Stall 410", market: "Nakasero", category: "Vehicle Parts", phone: "+256759012345", location: "Auto Parts", description: "Maintenance free car battery, 12V" }
+  ];
+}
+
+/**
+ * Open sell product modal - checks for 10,000 UGX monthly advertising fee first
+ */
+window.openSellModal = function() {
+  if (!isSellerSubscribed) {
+    openSellerSubscribeModal();
+    return;
+  }
+  document.getElementById("sellModal").classList.add("active");
+}
+
+/**
+ * Close sell product modal
+ */
+window.closeSellModal = function() {
+  document.getElementById("sellModal").classList.remove("active");
+  document.getElementById("sellItem").value = "";
+  document.getElementById("sellPrice").value = "";
+  document.getElementById("sellPhone").value = "";
+  document.getElementById("sellLocation").value = "";
+  document.getElementById("sellDescription").value = "";
+}
+
+/**
+ * Open seller subscription modal for 10,000 UGX/month
+ */
+window.openSellerSubscribeModal = function() {
+  document.getElementById("sellerSubscribeModal").classList.add("active");
+}
+
+/**
+ * Close seller subscription modal
+ */
+window.closeSellerSubscribeModal = function() {
+  document.getElementById("sellerSubscribeModal").classList.remove("active");
+}
+
+/**
+ * List a new product for sale - only for subscribed sellers
+ */
+window.listProduct = async function() {
+  if (!isSellerSubscribed) {
+    alert("You need an active 10,000 UGX/month advertising subscription to list products.");
+    openSellerSubscribeModal();
+    closeSellModal();
+    return;
+  }
+  
+  const item = document.getElementById("sellItem").value.trim();
+  const price = document.getElementById("sellPrice").value.trim();
+  const category = document.getElementById("sellCategory").value;
+  const market = document.getElementById("sellMarket").value;
+  const phoneInput = document.getElementById("sellPhone").value.trim();
+  const location = document.getElementById("sellLocation").value.trim();
+  const description = document.getElementById("sellDescription").value.trim();
+  const listBtn = document.getElementById("listProductBtn");
+  
+  if (!item || !price || !phoneInput) {
+    alert("Please fill in all required fields");
+    return;
+  }
+  if (!/^[0-9]{9}$/.test(phoneInput)) {
+    alert("Enter a valid 9-digit Uganda phone number after +256");
+    return;
+  }
+  
+  const fullPhoneNumber = UGANDA_COUNTRY_CODE + phoneInput;
+  const formattedPrice = price.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " UGX";
+  
+  listBtn.disabled = true;
+  listBtn.textContent = "Listing Product...";
+  
+  try {
+    await addDoc(collection(db, "userProducts"), {
+      item: item, price: formattedPrice, category: category, market: market,
+      phone: fullPhoneNumber, location: location, description: description,
+      vendor: `User - ${fullPhoneNumber}`, trend: "stable", change: "New",
+      userId: currentUserId, createdAt: new Date(), status: "active"
+    });
+    alert("Product listed successfully! Your ad is now live for buyers.");
+    closeSellModal();
+    loadMyProducts();
+    renderBuyerData();
+  } catch (error) {
+    console.error("Error listing product:", error);
+    alert("Failed to list product. Please try again.");
+  } finally {
+    listBtn.disabled = false;
+    listBtn.textContent = "List Product";
+  }
+}
+
+/**
+ * Load and display user's listed products - LOCKED if not subscribed
+ */
+async function loadMyProducts() {
+  const container = document.getElementById("myProducts");
+  if (!currentUserId) {
+    container.innerHTML = `<div class="loading">Connecting...</div>`;
+    return;
+  }
+  
+  // LOCK SELLER PAGE - Show paywall if not subscribed
+  if (!isSellerSubscribed) {
+    container.innerHTML = `
+      <div class="seller-paywall">
+        <h3>Seller Access Locked</h3>
+        <p>Pay 10,000 UGX/month to unlock seller features and list your products</p>
+        <button class="sell-btn" onclick="openSellerSubscribeModal()" style="width: auto; padding: 12px 32px; margin-top: 16px;">Unlock Seller Page - 10,000 UGX/Month</button>
+        <div class="test-note" style="margin-top: 20px;">TEST MODE: Use card 4084 0840 8408 4081</div>
+      </div>`;
+    return;
+  }
+  
+  // If subscribed, show products
+  container.innerHTML = `<div class="loading">Loading your products...</div>`;
+  const q = query(collection(db, "userProducts"), where("userId", "==", currentUserId), orderBy("createdAt", "desc"));
+  
+  onSnapshot(q, (snapshot) => {
+    myProductsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    let html = "";
+    if (myProductsData.length === 0) {
+      html += `<div class="no-results" style="grid-column: 1 / -1;">You haven't listed any products yet.<br>Click "Add New Product" to get started.</div>`;
+    } else {
+      html += myProductsData.map(item => `
+        <div class="market-card">
+          <h3>${item.item}</h3>
+          <div class="price">${item.price}</div>
+          <div class="trend stable">• ${item.change}</div>
+          <div class="vendor"><strong>Contact:</strong> ${item.phone}</div>
+          ${item.location ? `<div class="vendor"><strong>Location:</strong> ${item.location}</div>` : ''}
+          ${item.description ? `<div class="description-box"><strong>Description:</strong> ${item.description}</div>` : ''}
+          <div><span class="market-tag">${item.market}</span><span class="category-tag">${item.category}</span></div>
+          <button onclick="deleteProduct('${item.id}')" style="margin-top: 12px; padding: 8px 12px; background: #dc2626; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; width: 100%;">Delete Product</button>
+        </div>
+      `).join('');
+    }
+    container.innerHTML = html;
+  });
+}
+
+/**
+ * Delete a user's product
+ */
+window.deleteProduct = async function(productId) {
+  if (confirm("Are you sure you want to delete this product?")) {
+    try {
+      await deleteDoc(doc(db, "userProducts", productId));
+      alert("Product deleted successfully.");
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      alert("Failed to delete product.");
+    }
+  }
+}
+
+/**
+ * Open premium subscription modal - 200 UGX for viewing vendor contacts on Market page
+ */
+window.openSubscribeModal = function() {
+  document.getElementById("subscribeModal").classList.add("active");
+}
+
+/**
+ * Close premium subscription modal
+ */
+window.closeSubscribeModal = function() {
+  document.getElementById("subscribeModal").classList.remove("active");
+}
+
+/**
+ * Check premium subscription status - 200 UGX for Market page
+ */
+async function checkSubscription() {
+  if (!currentUserId) return;
+  const subRef = doc(db, "subscriptions", currentUserId);
+  const subSnap = await getDoc(subRef);
+  if (subSnap.exists()) {
+    const subData = subSnap.data();
+    const now = new Date();
+    const expiresAt = subData.expiresAt?.toDate ? subData.expiresAt.toDate() : new Date(subData.expiresAt);
+    if (expiresAt > now && subData.status === "active") {
+      isSubscribed = true;
+      userPhone = subData.phone;
+    }
+  }
+}
+
+/**
+ * Check seller subscription status - 10,000 UGX/month for Seller page
+ */
+async function checkSellerSubscription() {
+  if (!currentUserId) return;
+  const sellerSubRef = doc(db, "sellerSubscriptions", currentUserId);
+  const sellerSubSnap = await getDoc(sellerSubRef);
+  if (sellerSubSnap.exists()) {
+    const subData = sellerSubSnap.data();
+    const now = new Date();
+    const expiresAt = subData.expiresAt?.toDate ? subData.expiresAt.toDate() : new Date(subData.expiresAt);
+    if (expiresAt > now && subData.status === "active") {
+      isSellerSubscribed = true;
+      console.log("Active seller subscription found - Seller page unlocked");
+    } else {
+      await setDoc(sellerSubRef, { status: "expired" }, { merge: true });
+      isSellerSubscribed = false;
+    }
+  }
+}
+
+// Initialize app when page loads
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUserId = user.uid;
+    await checkSubscription();
+    await checkSellerSubscription();
+    renderMarketData();
+    renderBuyerData();
+    loadMyProducts();
+  }
+});
+
+// Start the app
+initApp();
+</script>
+</body>
+  </html>
